@@ -1,0 +1,26 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Environment files
+.env
+
+# SQLite local databases
+*.db
+*.db-journal
+
+# Dependency directory
+vendor/
+
+# macOS files
+.DS_Store
+
+# Local agent artifacts
+.agents/
+.claude/
+.omp/
+skills-lock.json

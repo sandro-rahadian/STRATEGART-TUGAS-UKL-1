@@ -1,0 +1,380 @@
+{
+	"info": {
+		"_postman_id": "auth-api-erd-collection-2026",
+		"name": "REST API Autentikasi (USERS, OTP, PASSWORD_RESET)",
+		"description": "Koleksi Postman untuk pengujian REST API Autentikasi sesuai skema ERD:\n1. Register (USERS)\n2. Login Email\n3. Login WhatsApp + OTP (OTP)\n4. Lupa Password + OTP + Token Reset (PASSWORD_RESET)\n5. User Profile (JWT Bearer Token)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Register (Pendaftaran Akun)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"user@example.com\",\n  \"whatsapp_number\": \"081234567890\",\n  \"password\": \"password123\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"register"
+					]
+				},
+				"description": "Menambahkan user baru ke tabel USERS dengan password terenkripsi Bcrypt."
+			},
+			"response": []
+		},
+		{
+			"name": "2. Login Email",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var res = pm.response.json();",
+							"    if (res.data && res.data.token) {",
+							"        pm.collectionVariables.set(\"token\", res.data.token);",
+							"        console.log(\"Token JWT tersimpan otomatis!\");",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/login-email",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login-email"
+					]
+				},
+				"description": "Login dengan email & password. Mengembalikan Token JWT."
+			},
+			"response": []
+		},
+		{
+			"name": "3a. Login WhatsApp - Minta OTP",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var res = pm.response.json();",
+							"    if (res.data && res.data.kode_otp) {",
+							"        pm.collectionVariables.set(\"otp_wa\", res.data.kode_otp);",
+							"        console.log(\"OTP WA tersimpan: \" + res.data.kode_otp);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"whatsapp_number\": \"081234567890\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/login-whatsapp/otp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login-whatsapp",
+						"otp"
+					]
+				},
+				"description": "Menyimpan OTP ke tabel OTP (is_used = false, berlaku 5 menit)."
+			},
+			"response": []
+		},
+		{
+			"name": "3b. Login WhatsApp - Verifikasi OTP",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var res = pm.response.json();",
+							"    if (res.data && res.data.token) {",
+							"        pm.collectionVariables.set(\"token\", res.data.token);",
+							"        console.log(\"Token JWT Login WA tersimpan!\");",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"whatsapp_number\": \"081234567890\",\n  \"kode_otp\": \"{{otp_wa}}\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/login-whatsapp/verify",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login-whatsapp",
+						"verify"
+					]
+				},
+				"description": "Memvalidasi OTP dan mengubah is_used = true (hanya bisa 1x pakai)."
+			},
+			"response": []
+		},
+		{
+			"name": "4a. Lupa Password - Minta OTP",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var res = pm.response.json();",
+							"    if (res.data && res.data.kode_otp) {",
+							"        pm.collectionVariables.set(\"otp_reset\", res.data.kode_otp);",
+							"        console.log(\"OTP Reset tersimpan: \" + res.data.kode_otp);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email_or_whatsapp\": \"user@example.com\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/forgot-password/otp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"forgot-password",
+						"otp"
+					]
+				},
+				"description": "Minta OTP untuk lupa password (disimpan di tabel OTP dengan tipe FORGOT_PASSWORD)."
+			},
+			"response": []
+		},
+		{
+			"name": "4b. Lupa Password - Verifikasi OTP & Dapatkan Reset Token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var res = pm.response.json();",
+							"    if (res.data && res.data.reset_token) {",
+							"        pm.collectionVariables.set(\"reset_token\", res.data.reset_token);",
+							"        console.log(\"Reset token tersimpan: \" + res.data.reset_token);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email_or_whatsapp\": \"user@example.com\",\n  \"kode_otp\": \"{{otp_reset}}\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/forgot-password/verify-otp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"forgot-password",
+						"verify-otp"
+					]
+				},
+				"description": "Memvalidasi OTP lalu menyimpan token unik ke tabel PASSWORD_RESET."
+			},
+			"response": []
+		},
+		{
+			"name": "4c. Lupa Password - Reset Kata Sandi Baru dengan Token",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"new_password\": \"passwordbaru999\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/forgot-password/reset",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"forgot-password",
+						"reset"
+					]
+				},
+				"description": "Mengganti password di USERS dan menandai is_used = true di PASSWORD_RESET."
+			},
+			"response": []
+		},
+		{
+			"name": "4d. Lupa Password - Reset Langsung dengan OTP (Opsi Cepat)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email_or_whatsapp\": \"user@example.com\",\n  \"kode_otp\": \"{{otp_reset}}\",\n  \"new_password\": \"passwordbaru999\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/auth/forgot-password/reset-with-otp",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"forgot-password",
+						"reset-with-otp"
+					]
+				},
+				"description": "Alternatif alur cepat: langsung ganti password dengan OTP."
+			},
+			"response": []
+		},
+		{
+			"name": "5. Get Profile User (Protected)",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{token}}"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/user/profile",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"user",
+						"profile"
+					]
+				},
+				"description": "Akses rute terproteksi menggunakan JWT Bearer token."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080"
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "otp_wa",
+			"value": ""
+		},
+		{
+			"key": "otp_reset",
+			"value": ""
+		},
+		{
+			"key": "reset_token",
+			"value": ""
+		}
+	]
+}

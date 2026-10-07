@@ -1,0 +1,238 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "REST API Autentikasi (Golang & Supabase)",
+    "description": "Dokumentasi REST API Autentikasi dengan Desain Database: USERS, OTP, dan PASSWORD_RESET.\n\n### Alur Fitur:\n1. **Register** — Mendaftarkan akun (email, whatsapp_number, password)\n2. **Login Email** — Masuk dengan email & password, mengembalikan Token JWT\n3. **Login WhatsApp + OTP** — Minta OTP ke nomor WhatsApp lalu verifikasi OTP untuk login\n4. **Lupa Password + OTP** — Minta OTP, verifikasi OTP untuk mendapatkan reset token, lalu reset password baru\n5. **Lihat Profil (Protected)** — Akses data profil dengan Header `Authorization: Bearer <token>`",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Server Lokal"
+    }
+  ],
+  "tags": [
+    { "name": "Auth - Register", "description": "Pendaftaran akun baru" },
+    { "name": "Auth - Login Email", "description": "Login dengan email & password" },
+    { "name": "Auth - Login WhatsApp", "description": "Login dengan nomor WhatsApp & OTP" },
+    { "name": "Auth - Lupa Password", "description": "Pemulihan kata sandi dengan OTP dan Reset Token" },
+    { "name": "User Profile", "description": "Endpoint terproteksi dengan JWT" }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Auth - Register"],
+        "summary": "Pendaftaran Akun Baru",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "whatsapp_number", "password"],
+                "properties": {
+                  "email": { "type": "string", "example": "user@example.com" },
+                  "whatsapp_number": { "type": "string", "example": "081234567890" },
+                  "password": { "type": "string", "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Pendaftaran berhasil" },
+          "400": { "description": "Input tidak valid" },
+          "409": { "description": "Email atau nomor WhatsApp sudah terdaftar" }
+        }
+      }
+    },
+    "/api/auth/login-email": {
+      "post": {
+        "tags": ["Auth - Login Email"],
+        "summary": "Login Menggunakan Email & Password",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "example": "user@example.com" },
+                  "password": { "type": "string", "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login sukses, mengembalikan Token JWT" },
+          "401": { "description": "Email tidak terdaftar atau kata sandi salah" }
+        }
+      }
+    },
+    "/api/auth/login-whatsapp/otp": {
+      "post": {
+        "tags": ["Auth - Login WhatsApp"],
+        "summary": "Langkah 1: Minta Kode OTP WhatsApp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["whatsapp_number"],
+                "properties": {
+                  "whatsapp_number": { "type": "string", "example": "081234567890" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Kode OTP berhasil dikirim (berlaku 5 menit)" },
+          "404": { "description": "Nomor WhatsApp belum terdaftar" }
+        }
+      }
+    },
+    "/api/auth/login-whatsapp/verify": {
+      "post": {
+        "tags": ["Auth - Login WhatsApp"],
+        "summary": "Langkah 2: Verifikasi OTP WhatsApp & Login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["whatsapp_number", "kode_otp"],
+                "properties": {
+                  "whatsapp_number": { "type": "string", "example": "081234567890" },
+                  "kode_otp": { "type": "string", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Verifikasi sukses, mengembalikan Token JWT" },
+          "400": { "description": "OTP salah, kedaluwarsa, atau sudah pernah dipakai" }
+        }
+      }
+    },
+    "/api/auth/forgot-password/otp": {
+      "tags": ["Auth - Lupa Password"],
+      "summary": "Langkah 1: Minta OTP Lupa Password",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["email_or_whatsapp"],
+              "properties": {
+                "email_or_whatsapp": { "type": "string", "example": "user@example.com" }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": { "description": "Kode OTP reset berhasil dikirim" },
+        "404": { "description": "Akun tidak ditemukan" }
+      }
+    },
+    "/api/auth/forgot-password/verify-otp": {
+      "tags": ["Auth - Lupa Password"],
+      "summary": "Langkah 2: Verifikasi OTP & Terbitkan Reset Token",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["email_or_whatsapp", "kode_otp"],
+              "properties": {
+                "email_or_whatsapp": { "type": "string", "example": "user@example.com" },
+                "kode_otp": { "type": "string", "example": "123456" }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": { "description": "OTP valid, mengembalikan reset_token (berlaku 15 menit)" },
+        "400": { "description": "OTP salah atau kedaluwarsa" }
+      }
+    },
+    "/api/auth/forgot-password/reset": {
+      "tags": ["Auth - Lupa Password"],
+      "summary": "Langkah 3: Reset Kata Sandi Baru dengan Token",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["token", "new_password"],
+              "properties": {
+                "token": { "type": "string", "example": "b489dca8-392c-4977-83eb-275d7b212f38" },
+                "new_password": { "type": "string", "example": "passwordbaru999" }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": { "description": "Kata sandi berhasil diperbarui" },
+        "400": { "description": "Token tidak valid atau sudah kedaluwarsa" }
+      }
+    },
+    "/api/auth/forgot-password/reset-with-otp": {
+      "tags": ["Auth - Lupa Password"],
+      "summary": "Opsi Cepat: Reset Kata Sandi Langsung dengan OTP",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["email_or_whatsapp", "kode_otp", "new_password"],
+              "properties": {
+                "email_or_whatsapp": { "type": "string", "example": "user@example.com" },
+                "kode_otp": { "type": "string", "example": "123456" },
+                "new_password": { "type": "string", "example": "passwordbaru999" }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": { "description": "Kata sandi berhasil diperbarui" },
+        "400": { "description": "OTP salah atau kedaluwarsa" }
+      }
+    },
+    "/api/user/profile": {
+      "get": {
+        "tags": ["User Profile"],
+        "summary": "Lihat Data Profil Pengguna (Protected Route)",
+        "security": [
+          { "BearerAuth": [] }
+        ],
+        "responses": {
+          "200": { "description": "Profil berhasil diambil" },
+          "401": { "description": "Token JWT tidak ditemukan atau tidak valid" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
