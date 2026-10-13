@@ -97,7 +97,7 @@ func main() {
 		authRoutes := api.Group("/auth")
 		{
 			authRoutes.POST("/register", authHandler.Register)
-			authRoutes.POST("/login-email", authHandler.LoginEmail)
+			authRoutes.POST("/login", authHandler.Login)
 			authRoutes.POST("/login-whatsapp/otp", authHandler.RequestWhatsAppOTP)
 			authRoutes.POST("/login-whatsapp/verify", authHandler.VerifyWhatsAppOTP)
 			authRoutes.POST("/forgot-password/otp", authHandler.RequestForgotPasswordOTP)

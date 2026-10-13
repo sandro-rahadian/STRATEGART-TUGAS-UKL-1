@@ -79,8 +79,8 @@ func SetupRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHand
 			// Flow 1: Register
 			authRoutes.POST("/register", authHandler.Register)
 
-			// Flow 2: Login Email
-			authRoutes.POST("/login-email", authHandler.LoginEmail)
+			// Flow 2: Login (identifier = email ATAU nomor WhatsApp)
+			authRoutes.POST("/login", authHandler.Login)
 
 			// Flow 3: Login WhatsApp + OTP
 			authRoutes.POST("/login-whatsapp/otp", authHandler.RequestWhatsAppOTP)

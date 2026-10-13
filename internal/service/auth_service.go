@@ -66,16 +66,18 @@ func (s *AuthService) Register(email, whatsapp, password string) (*model.User, e
 	return newUser, nil
 }
 
-// LoginEmail memvalidasi kredensial email & password dan menghasilkan JWT Token
-func (s *AuthService) LoginEmail(email, password string) (string, *model.User, error) {
-	user, err := s.userRepo.FindByEmail(email)
+// Login memvalidasi kredensial identifier (email ATAU nomor WhatsApp) & password
+// dan menghasilkan JWT Token. Pesan error sengaja dibuat sama untuk akun tidak
+// ditemukan maupun password salah, agar tidak membocorkan keberadaan sebuah akun.
+func (s *AuthService) Login(identifier, password string) (string, *model.User, error) {
+	user, err := s.userRepo.FindByEmailOrWhatsApp(identifier)
 	if err != nil {
-		return "", nil, fmt.Errorf("email tidak terdaftar atau kata sandi salah")
+		return "", nil, fmt.Errorf("akun tidak ditemukan atau kata sandi salah")
 	}
 
 	// Bandingkan hash password
 	if !utils.CheckPassword(password, user.PasswordHash) {
-		return "", nil, fmt.Errorf("email tidak terdaftar atau kata sandi salah")
+		return "", nil, fmt.Errorf("akun tidak ditemukan atau kata sandi salah")
 	}
 
 	// Buat token JWT
@@ -84,7 +86,7 @@ func (s *AuthService) LoginEmail(email, password string) (string, *model.User, e
 		return "", nil, fmt.Errorf("gagal menerbitkan token autentikasi")
 	}
 
-	log.Printf("🔑 Login Email berhasil: %s\n", email)
+	log.Printf("🔑 Login berhasil: %s (WA: %s)\n", identifier, user.WhatsAppNumber)
 	return token, user, nil
 }
 

@@ -73,28 +73,28 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 }
 
-// 2. LOGIN EMAIL
-type LoginEmailRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+// 2. LOGIN (identifier = email ATAU nomor WhatsApp)
+type LoginRequest struct {
+	Identifier string `json:"identifier"`
+	Password   string `json:"password"`
 }
 
-func (h *AuthHandler) LoginEmail(c *gin.Context) {
-	var req LoginEmailRequest
+func (h *AuthHandler) Login(c *gin.Context) {
+	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Format data JSON tidak valid!"})
 		return
 	}
 
-	email := strings.TrimSpace(req.Email)
+	identifier := strings.TrimSpace(req.Identifier)
 	pass := strings.TrimSpace(req.Password)
 
-	if email == "" || pass == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Email dan kata sandi wajib diisi!"})
+	if identifier == "" || pass == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "Identifier (email atau nomor WhatsApp) dan kata sandi wajib diisi!"})
 		return
 	}
 
-	token, user, err := h.authService.LoginEmail(email, pass)
+	token, user, err := h.authService.Login(identifier, pass)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": err.Error()})
 		return

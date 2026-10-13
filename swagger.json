@@ -46,19 +46,20 @@
         }
       }
     },
-    "/api/auth/login-email": {
+    "/api/auth/login": {
       "post": {
-        "tags": ["Auth - Login Email"],
-        "summary": "Login Menggunakan Email & Password",
+        "tags": ["Auth - Login"],
+        "summary": "Login Menggunakan Email ATAU Nomor WhatsApp & Password",
+        "description": "Satu endpoint untuk login. Isi `identifier` dengan email ATAU nomor WhatsApp yang terdaftar, sistem mencarinya di kedua kolom sekaligus.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email", "password"],
+                "required": ["identifier", "password"],
                 "properties": {
-                  "email": { "type": "string", "example": "user@example.com" },
+                  "identifier": { "type": "string", "description": "Email ATAU nomor WhatsApp pengguna", "example": "user@example.com" },
                   "password": { "type": "string", "example": "password123" }
                 }
               }
@@ -67,7 +68,8 @@
         },
         "responses": {
           "200": { "description": "Login sukses, mengembalikan Token JWT" },
-          "401": { "description": "Email tidak terdaftar atau kata sandi salah" }
+          "400": { "description": "Identifier atau kata sandi kosong" },
+          "401": { "description": "Akun tidak ditemukan atau kata sandi salah" }
         }
       }
     },

@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", authHandler.Register)
-			auth.POST("/login-email", authHandler.LoginEmail)
+			auth.POST("/login", authHandler.Login)
 			auth.POST("/login-whatsapp/otp", authHandler.RequestWhatsAppOTP)
 			auth.POST("/login-whatsapp/verify", authHandler.VerifyWhatsAppOTP)
 			auth.POST("/forgot-password/otp", authHandler.RequestForgotPasswordOTP)
@@ -130,12 +130,12 @@ func TestAuthFlow(t *testing.T) {
 		}
 	})
 
-	// 2. LOGIN EMAIL
+	// 2. LOGIN (identifier = email ATAU nomor WhatsApp)
 	var loginToken string
-	t.Run("Login Email Sukses", func(t *testing.T) {
-		w := doRequest("POST", "/api/auth/login-email", map[string]string{
-			"email":    "budi@example.com",
-			"password": "rahasia123",
+	t.Run("Login dengan Identifier Email", func(t *testing.T) {
+		w := doRequest("POST", "/api/auth/login", map[string]string{
+			"identifier": "budi@example.com",
+			"password":   "rahasia123",
 		}, nil)
 
 		if w.Code != http.StatusOK {
@@ -149,6 +149,28 @@ func TestAuthFlow(t *testing.T) {
 		}
 		_ = json.Unmarshal(w.Body.Bytes(), &res)
 		loginToken = res.Data.Token
+	})
+
+	t.Run("Login dengan Identifier Nomor WhatsApp", func(t *testing.T) {
+		w := doRequest("POST", "/api/auth/login", map[string]string{
+			"identifier": "081234567890",
+			"password":   "rahasia123",
+		}, nil)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("Ekspektasi 200 OK dari login via nomor WhatsApp, dapat: %d", w.Code)
+		}
+	})
+
+	t.Run("Login dengan Password Salah Ditolak", func(t *testing.T) {
+		w := doRequest("POST", "/api/auth/login", map[string]string{
+			"identifier": "budi@example.com",
+			"password":   "passwordSalahSekali",
+		}, nil)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("Ekspektasi 401 Unauthorized, dapat: %d", w.Code)
+		}
 	})
 
 	// 3. LOGIN WHATSAPP + OTP
@@ -245,9 +267,9 @@ func TestAuthFlow(t *testing.T) {
 	})
 
 	t.Run("Login dengan Password Baru", func(t *testing.T) {
-		w := doRequest("POST", "/api/auth/login-email", map[string]string{
-			"email":    "budi@example.com",
-			"password": "passwordBaru123",
+		w := doRequest("POST", "/api/auth/login", map[string]string{
+			"identifier": "budi@example.com",
+			"password":   "passwordBaru123",
 		}, nil)
 
 		if w.Code != http.StatusOK {

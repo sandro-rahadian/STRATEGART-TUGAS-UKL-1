@@ -125,7 +125,7 @@ Diagram di bawah ini **diambil langsung dari kode sumber** (`main.go`, `internal
 | # | Method | Path | Auth | Fungsi | Sukses |
 |---|--------|------|------|--------|--------|
 | 1 | `POST` | `/api/auth/register` | Publik | Daftar akun baru (email + WhatsApp + password) | `201` |
-| 2 | `POST` | `/api/auth/login-email` | Publik | Login pakai email + password | `200` |
+| 2 | `POST` | `/api/auth/login` | Publik | Login pakai **email atau nomor WhatsApp** + password | `200` |
 | 3 | `POST` | `/api/auth/login-whatsapp/otp` | Publik | Minta kode OTP login WhatsApp | `200` |
 | 4 | `POST` | `/api/auth/login-whatsapp/verify` | Publik | Verifikasi OTP login → JWT | `200` |
 | 5 | `POST` | `/api/auth/forgot-password/otp` | Publik | Minta OTP lupa password | `200` |
@@ -183,20 +183,20 @@ flowchart TD
 
 ---
 
-### 2. `POST /api/auth/login-email` — Login Email + Password
+### 2. `POST /api/auth/login` — Login (Email atau Nomor WhatsApp + Password)
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
 flowchart TD
-    A(["POST /api/auth/login-email"]) --> B["Body JSON<br/>email · password"]
+    A(["POST /api/auth/login"]) --> B["Body JSON<br/>identifier · password<br/>identifier = email ATAU nomor WhatsApp"]
     B --> C{"ShouldBindJSON valid?"}
     C -->|No| E1["400 · Format data JSON tidak valid"]
     C -->|Yes| D["TrimSpace both fields"]
-    D --> E{"email AND password<br/>both filled?"}
-    E -->|No| E2["400 · Email dan kata sandi wajib diisi"]
-    E -->|Yes| F["service.LoginEmail"]
-    F --> G{"SELECT users<br/>WHERE email ?"}
-    G -->|Not found| E3["401 · Email tidak terdaftar<br/>atau kata sandi salah"]
+    D --> E{"identifier AND password<br/>both filled?"}
+    E -->|No| E2["400 · Identifier dan kata sandi<br/>wajib diisi"]
+    E -->|Yes| F["service.Login"]
+    F --> G["SELECT users WHERE email = identifier<br/>OR whatsapp_number = identifier"]
+    G -->|Not found| E3["401 · Akun tidak ditemukan<br/>atau kata sandi salah"]
     G -->|Found| H{"Bcrypt CheckPassword<br/>hash match?"}
     H -->|No| E3
     H -->|Yes| I["utils.GenerateToken<br/>HS256 · exp 24 jam<br/>claim: user_id · email · whatsapp_number"]
@@ -419,7 +419,7 @@ Menunjukkan tabel mana yang diakses pada setiap endpoint:
 flowchart LR
     subgraph AUTH["/api/auth"]
         A1["1. register"]
-        A2["2. login-email"]
+        A2["2. login<br/>(email / WA)"]
         A3["3. wa/otp"]
         A4["4. wa/verify"]
         A5["5. forgot/otp"]
@@ -437,7 +437,7 @@ flowchart LR
     P[("PASSWORD_RESET<br/>id PK · user_id FK<br/>token<br/>expired_at · is_used")]
 
     A1 -->|"INSERT<br/>SELECT dup check"| U
-    A2 -->|"SELECT + Bcrypt compare"| U
+    A2 -->|"SELECT by email OR WA<br/>+ Bcrypt compare"| U
     A3 -->|"SELECT user,<br/>INSERT OTP"| U
     A3 -->|"INSERT<br/>tipe=LOGIN"| O
     A4 -->|"SELECT user,<br/>SELECT + MarkUsed OTP"| U
