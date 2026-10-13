@@ -138,44 +138,6 @@ Endpoint dokumentasi (tidak memakai handler): `GET /`, `GET /docs`, `GET /swagge
 
 ---
 
-### 1. Diagram Alur Utama (Arsitektur Lapisan + Routing)
-
-```mermaid
-%%{init: {"theme":"default"}}%%
-flowchart TD
-    C(["Client<br/>Postman / Swagger UI / App"]) -->|"HTTP Request"| GIN["Gin Router<br/>main.go"]
-
-    GIN --> S{"Static / Docs Route?"}
-    S -->|"/ , /docs, /swagger"| SW["Swagger UI Handler<br/>200 · HTML"]
-    S -->|"/swagger.json"| SJ["swagger.json<br/>200 · File"]
-    S -->|"/swagger-dark.css"| SC["swagger-dark.css<br/>200 · File"]
-    S -->|"/postman_collection.json"| PC["postman_collection.json<br/>200 · File"]
-    S -->|"No · prefix /api"| GRP{"API Group"}
-
-    GRP --> AU{"/api/auth/*"}
-    GRP --> UM["/api/user/*<br/>middleware.AuthMiddleware"]
-
-    AU --> EP["8 Public Endpoints<br/>Register · Login Email<br/>Login WA OTP · Forgot Password"]
-    EP --> HL["Handler Layer<br/>auth_handler.go<br/>Bind JSON · TrimSpace · Validasi"]
-
-    UM --> M1{"Header Authorization<br/>present?"}
-    M1 -->|Missing| X1["401 · Header Authorization<br/>tidak ditemukan"]
-    M1 -->|Present| M2{"Format Bearer token?"}
-    M2 -->|Invalid| X2["401 · Format token salah"]
-    M2 -->|Valid| M3{"JWT valid &<br/>not expired?"}
-    M3 -->|Invalid| X3["401 · Token tidak valid atau<br/>telah kedaluwarsa"]
-    M3 -->|Valid| CTX["Set Context<br/>user_id · email · whatsapp_number"]
-    CTX --> EP9["GET /api/user/profile"]
-
-    HL --> SVL["Service Layer<br/>auth_service.go<br/>Business Logic"]
-    EP9 --> SVL
-
-    SVL --> REPO["Repository Layer<br/>user_repository.go<br/>otp_repository.go<br/>password_reset_repository.go"]
-    REPO --> DB[("Database<br/>Supabase PostgreSQL<br/>atau SQLite local.db")]
-
-    SVL --> UTIL["Utils · pkg/utils<br/>Bcrypt Hash · JWT HS256 24 jam<br/>OTP 6 digit · UUID Reset Token"]
-```
-
 **Konvensi diagram di bawah ini:**
 
 | Bentuk | Arti |
@@ -188,7 +150,7 @@ flowchart TD
 
 ---
 
-### 2. `POST /api/auth/register` — Pendaftaran Akun
+### 1. `POST /api/auth/register` — Pendaftaran Akun
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
@@ -221,7 +183,7 @@ flowchart TD
 
 ---
 
-### 3. `POST /api/auth/login-email` — Login Email + Password
+### 2. `POST /api/auth/login-email` — Login Email + Password
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
@@ -245,7 +207,7 @@ flowchart TD
 
 ---
 
-### 4. `POST /api/auth/login-whatsapp/otp` — Minta OTP Login WhatsApp
+### 3. `POST /api/auth/login-whatsapp/otp` — Minta OTP Login WhatsApp
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
@@ -273,7 +235,7 @@ flowchart TD
 
 ---
 
-### 5. `POST /api/auth/login-whatsapp/verify` — Verifikasi OTP Login → JWT
+### 4. `POST /api/auth/login-whatsapp/verify` — Verifikasi OTP Login → JWT
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
@@ -302,7 +264,7 @@ flowchart TD
 
 ---
 
-### 6. `POST /api/auth/forgot-password/otp` — Minta OTP Lupa Password
+### 5. `POST /api/auth/forgot-password/otp` — Minta OTP Lupa Password
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
@@ -325,11 +287,11 @@ flowchart TD
     L --> M(["200 OK<br/>target · berlaku 5 Menit · kode_otp"])
 ```
 
-> 📌 Bedanya dengan endpoint #4: pencarian user memakai `email OR whatsapp_number`, dan `tipe` OTP diisi `FORGOT_PASSWORD` — sehingga OTP login tidak akan bisa dipakai untuk reset password (dan sebaliknya).
+> 📌 Bedanya dengan `POST /api/auth/login-whatsapp/otp`: pencarian user memakai `email OR whatsapp_number`, dan `tipe` OTP diisi `FORGOT_PASSWORD` — sehingga OTP login tidak akan bisa dipakai untuk reset password (dan sebaliknya).
 
 ---
 
-### 7. `POST /api/auth/forgot-password/verify-otp` — Verifikasi OTP → Terbitkan Reset Token
+### 6. `POST /api/auth/forgot-password/verify-otp` — Verifikasi OTP → Terbitkan Reset Token
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
@@ -361,7 +323,7 @@ flowchart TD
 
 ---
 
-### 8. `POST /api/auth/forgot-password/reset` — Reset Password Pakai Reset Token
+### 7. `POST /api/auth/forgot-password/reset` — Reset Password Pakai Reset Token
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
@@ -391,7 +353,7 @@ flowchart TD
 
 ---
 
-### 9. `POST /api/auth/forgot-password/reset-with-otp` — Reset Password Langsung (Opsi Cepat)
+### 8. `POST /api/auth/forgot-password/reset-with-otp` — Reset Password Langsung (Opsi Cepat)
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
@@ -418,11 +380,11 @@ flowchart TD
     M --> N(["200 OK<br/>Kata sandi berhasil diperbarui"])
 ```
 
-> ♻️ Endpoint ini **tidak punya logika sendiri** — `ResetPasswordWithOTP()` (`auth_service.go:250`) hanya mengkomposisi `VerifyForgotPasswordOTP()` lalu `ResetPasswordWithToken()` dalam satu request. Diagram di atas menunjukkan kedua subroutine yang dipanggil, jadi alur database-nya identik dengan endpoint #7 + #8 digabung.
+> ♻️ Endpoint ini **tidak punya logika sendiri** — `ResetPasswordWithOTP()` (`auth_service.go:250`) hanya mengkomposisi `VerifyForgotPasswordOTP()` lalu `ResetPasswordWithToken()` dalam satu request. Diagram di atas menunjukkan kedua subroutine yang dipanggil, jadi alur database-nya identik dengan `forgot-password/verify-otp` (bagian 6) + `forgot-password/reset` (bagian 7) digabung.
 
 ---
 
-### 10. `GET /api/user/profile` — Protected Route (JWT Bearer)
+### 9. `GET /api/user/profile` — Protected Route (JWT Bearer)
 
 ```mermaid
 %%{init: {"theme":"default"}}%%
